@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>쿠파의 몸 풀기 게임</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      background: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      font-family: sans-serif;
+    }
+    #game-container {
+      width: 800px;
+      height: 600px;
+      background: url("https://i.pinimg.com/736x/a8/1e/27/a81e27defcb9f945ee78a7a247b808cc.jpg") center/cover no-repeat;
+      border-radius: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* 공통 패널 디자인 */
+    .infoPanel {
+      position: absolute;
+      top: 20px;
+      background: linear-gradient(to bottom, #0b223a, #001020);
+      border: 2px solid #003366;
+      border-radius: 6px;
+      padding: 6px 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: inset 0 0 6px #000, 0 0 6px rgba(0,0,0,0.6);
+    }
+    #scorePanel { left: 20px; }
+    #timePanel { right: 20px; width: 180px; justify-content: space-between; }
+
+    .label {
+      color: #fff;
+      font-size: 12px;
+      font-family: sans-serif;
+    }
+    .value {
+      font-family: 'Orbitron', monospace;
+      font-size: 28px;
+      color: #FFD700;
+      letter-spacing: 2px;
+      text-shadow: 0 0 6px rgba(255, 215, 0, 0.8), 0 0 12px rgba(255, 215, 0, 0.5);
+      min-width: 80px;
+      text-align: right;
+    }
+
+    #queue {
+      position: absolute;
+      top: 120px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 12px;
+      background: rgba(0,0,0,0.3);
+      padding: 10px 20px;
+      border-radius: 12px;
+    }
+    .character {
+      width: 70px;
+      height: 70px;
+      background-size: contain;
+      background-repeat: no-repeat;
+      border-radius: 10px;
+    }
+    .character.highlight {
+      filter: drop-shadow(0 0 6px yellow) drop-shadow(0 0 12px yellow);
+    }
+    .character.correct {
+      filter: drop-shadow(0 0 6px lime) drop-shadow(0 0 12px lime);
+    }
+    .character.wrong {
+      filter: drop-shadow(0 0 6px red) drop-shadow(0 0 12px red);
+    }
+
+    /* 쿠파 캐릭터 (중앙 고정) */
+    #koopa {
+      position: absolute;
+      left: 50%;
+      top: 66%;
+      transform: translate(-50%, -50%);
+      width: 150px;
+      height: 150px;
+      background: url("https://raw.githubusercontent.com/duquenois/Arrow_Rush/refs/heads/main/default.png") center/contain no-repeat;
+      z-index: 10;
+    }
+
+    /* 팝업 */
+    .popup {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 25px 35px;
+      border-radius: 12px;
+      text-align: center;
+      display: none;
+      z-index: 1000;
+      min-width: 420px;
+    }
+    .popup h2 {
+      margin-bottom: 15px;
+      color: #ff4f81;
+      font-size: 20px;
+      white-space: nowrap;
+    }
+    .popup p {
+      margin: 8px 0;
+      font-size: 14px;
+      color: #333;
+    }
+    .popup button {
+      margin-top: 10px;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 8px;
+      background: #ff4f81;
+      color: white;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .popup button:hover {
+      background: #e63b6c;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <!-- 점수 패널 -->
+    <div id="scorePanel" class="infoPanel">
+      <div class="label">쿠파의 만족감</div>
+      <div id="scoreValue" class="value">0</div>
+    </div>
+
+    <!-- 시간 패널 -->
+    <div id="timePanel" class="infoPanel">
+      <div class="label">남은 시간</div>
+      <div id="timeValue" class="value">30.00</div>
+    </div>
+
+    <!-- 캐릭터 큐 -->
+    <div id="queue"></div>
+
+    <!-- 중앙 쿠파 -->
+    <div id="koopa"></div>
+
+    <!-- 규칙 팝업 -->
+    <div id="rulePopup" class="popup" style="display:block;">
+      <h2>게임 규칙</h2>
+      <p>1. 30초 안에 20점을 달성해야 합니다.</p>
+      <p>2. 캐릭터에 맞는 방향키를 입력하면 만족감이 증가합니다.</p>
+      <p>3. 캐릭터에 맞지 않는 방향키를 입력하면 만족감이 감소합니다.</p>
+      <button onclick="showGuidePopup()">다음</button>
+    </div>
+
+    <!-- 가이드 팝업 -->
+    <div id="guidePopup" class="popup">
+      <h2>캐릭터와 방향키</h2>
+      <div style="display:flex; gap:20px; justify-content:center; margin-bottom:10px;">
+        <img src="https://www.nicepng.com/png/full/10-105224_40new-super-mario-bros-super-mario.png" style="width:80px; height:auto;">
+        <img src="https://www.nicepng.com/png/full/11-112300_super-mario-luigi-mario-and-luigi-transparent.png" style="width:80px; height:auto;">
+        <img src="https://www.nicepng.com/png/full/3-38081_mario-golf-png-image-stock-mario-golf-world.png" style="width:80px; height:auto;">
+        <img src="https://mario.wiki.gallery/images/thumb/2/27/SuperMarioParty_Waluigi.png/1200px-SuperMarioParty_Waluigi.png" style="width:80px; height:auto;">
+      </div>
+      <div style="display:flex; gap:20px; justify-content:center; font-size:14px; font-weight:bold;">
+        <div>마리오<br>(← 방향키)</div>
+        <div>루이지<br>(→ 방향키)</div>
+        <div>와리오<br>(↑ 방향키)</div>
+        <div>와루이지<br>(↓ 방향키)</div>
+      </div>
+      <button onclick="startGame()">시작하기</button>
+    </div>
+
+    <!-- 성공 팝업 -->
+    <div id="popup1" class="popup">
+      <h2>성공! 만족스럽게 움직였습니다!</h2>
+      <button onclick="showSecondPopup()">확인</button>
+    </div>
+
+    <!-- 성공 팝업2 -->
+    <div id="popup2" class="popup">
+      <h2>힌트 문장 4</h2>
+      <p>성 꼭대기 탑은 거대한 해골 모양으로 장식되어 있다.</p>
+      <button onclick="closePopup()">닫기</button>
+    </div>
+
+    <!-- 실패 팝업 -->
+    <div id="failPopup" class="popup">
+      <h2>실패.. 충분히 움직이지 못했습니다..</h2>
+      <button onclick="closePopup()">닫기</button>
+    </div>
+  </div>
+
+  <script>
+    const scoreValue = document.getElementById("scoreValue");
+    const timeValue = document.getElementById("timeValue");
+    const queueDiv = document.getElementById("queue");
+    const rulePopup = document.getElementById("rulePopup");
+    const guidePopup = document.getElementById("guidePopup");
+    const popup1 = document.getElementById("popup1");
+    const popup2 = document.getElementById("popup2");
+    const failPopup = document.getElementById("failPopup");
+    const koopa = document.getElementById("koopa");
+
+    let score = 0;
+    let timeLeft = 30.00;
+    let gameRunning = false;
+    let gameInterval;
+    const targetScore = 10;
+    let queue = [];
+
+    // 쿠파 이미지 매핑
+    const koopaImages = {
+      default: "https://raw.githubusercontent.com/duquenois/Arrow_Rush/refs/heads/main/default.png",
+      ArrowLeft: "https://raw.githubusercontent.com/duquenois/Arrow_Rush/refs/heads/main/left.png",
+      ArrowRight: "https://raw.githubusercontent.com/duquenois/Arrow_Rush/refs/heads/main/right.png",
+      ArrowUp: "https://raw.githubusercontent.com/duquenois/Arrow_Rush/refs/heads/main/up.png",
+      ArrowDown: "https://raw.githubusercontent.com/duquenois/Arrow_Rush/refs/heads/main/down.png"
+    };
+
+    const characters = [
+      {name: "mario", key: "ArrowLeft", img: "https://www.nicepng.com/png/full/10-105224_40new-super-mario-bros-super-mario.png"},
+      {name: "luigi", key: "ArrowRight", img: "https://www.nicepng.com/png/full/11-112300_super-mario-luigi-mario-and-luigi-transparent.png"},
+      {name: "wario", key: "ArrowUp", img: "https://www.nicepng.com/png/full/3-38081_mario-golf-png-image-stock-mario-golf-world.png"},
+      {name: "waluigi", key: "ArrowDown", img: "https://mario.wiki.gallery/images/thumb/2/27/SuperMarioParty_Waluigi.png/1200px-SuperMarioParty_Waluigi.png"}
+    ];
+
+    function fillQueue() {
+      while (queue.length < 7) {
+        const data = characters[Math.floor(Math.random() * characters.length)];
+        queue.push(data);
+      }
+      renderQueue();
+    }
+
+    function renderQueue() {
+      queueDiv.innerHTML = "";
+      queue.forEach((c, i) => {
+        const div = document.createElement("div");
+        div.classList.add("character");
+        div.style.backgroundImage = `url(${c.img})`;
+        if (i === 0) div.classList.add("highlight");
+        queueDiv.appendChild(div);
+      });
+    }
+
+    function showGuidePopup() {
+      rulePopup.style.display = "none";
+      guidePopup.style.display = "block";
+    }
+
+    function startGame() {
+      guidePopup.style.display = "none";
+      gameRunning = true;
+      score = 0;
+      scoreValue.textContent = score;
+      timeLeft = 30.00;
+      timeValue.textContent = timeLeft.toFixed(2);
+
+      queue = [];
+      fillQueue();
+
+      gameInterval = setInterval(() => {
+        timeLeft -= 0.01;
+        if (timeLeft <= 0) {
+          clearInterval(gameInterval);
+          timeValue.textContent = "0.00";
+          endGame();
+        } else {
+          timeValue.textContent = timeLeft.toFixed(2);
+        }
+      }, 10);
+    }
+
+    function endGame(success=false) {
+      clearInterval(gameInterval);
+      gameRunning = false;
+      if (success) popup1.style.display = "block";
+      else failPopup.style.display = "block";
+    }
+
+    function showSecondPopup() {
+      popup1.style.display = "none";
+      popup2.style.display = "block";
+    }
+
+    function closePopup() {
+      popup1.style.display = "none";
+      popup2.style.display = "none";
+      failPopup.style.display = "none";
+    }
+
+    // 방향키 이벤트
+    window.addEventListener("keydown", (e) => {
+      if (koopaImages[e.key]) {
+        koopa.style.backgroundImage = `url(${koopaImages[e.key]})`;
+      }
+
+      if (!gameRunning) return;
+      const current = queue[0];
+      const firstDiv = queueDiv.children[0];
+
+      if (e.key === current.key) {
+        score++;
+        scoreValue.textContent = score;
+        firstDiv.classList.remove("highlight");
+        firstDiv.classList.add("correct");
+        setTimeout(() => {
+          queue.shift();
+          fillQueue();
+          if (score >= targetScore) endGame(true);
+        }, 150);
+      } else if (["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"].includes(e.key)) {
+        score = Math.max(0, score - 1);
+        scoreValue.textContent = score;
+        firstDiv.classList.remove("highlight");
+        firstDiv.classList.add("wrong");
+        setTimeout(() => {
+          queue.shift();
+          fillQueue();
+        }, 150);
+      }
+    });
+
+    window.addEventListener("keyup", () => {
+      koopa.style.backgroundImage = `url(${koopaImages.default})`;
+    });
+  </script>
+</body>
+</html>
