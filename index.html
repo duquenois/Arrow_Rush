@@ -42,7 +42,6 @@
     .label {
       color: #fff;
       font-size: 12px;
-      font-family: sans-serif;
     }
     .value {
       font-family: 'Orbitron', monospace;
@@ -82,7 +81,7 @@
       filter: drop-shadow(0 0 6px red) drop-shadow(0 0 12px red);
     }
 
-    /* 쿠파 캐릭터 (중앙 고정) */
+    /* 쿠파 캐릭터 */
     #koopa {
       position: absolute;
       left: 50%;
@@ -93,6 +92,39 @@
       background: url("https://raw.githubusercontent.com/duquenois/Arrow_Rush/refs/heads/main/default.png") center/contain no-repeat;
       z-index: 10;
     }
+
+    /* 방향키 버튼 (오른쪽 아래 구석) */
+    #controls {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      display: grid;
+      grid-template-areas:
+        ". up ."
+        "left down right";
+      gap: 8px;
+    }
+    .arrow-btn {
+      width: 60px;
+      height: 60px;
+      border-radius: 10px;
+      background: #fff;
+      border: 2px solid #333;
+      color: #000;
+      font-size: 26px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.15s;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+    .arrow-btn:hover {
+      background: #f1f1f1;
+      transform: scale(1.08);
+    }
+    #btn-up { grid-area: up; }
+    #btn-left { grid-area: left; }
+    #btn-right { grid-area: right; }
+    #btn-down { grid-area: down; }
 
     /* 팝업 */
     .popup {
@@ -136,34 +168,36 @@
 </head>
 <body>
   <div id="game-container">
-    <!-- 점수 패널 -->
     <div id="scorePanel" class="infoPanel">
       <div class="label">쿠파의 만족감</div>
       <div id="scoreValue" class="value">0</div>
     </div>
 
-    <!-- 시간 패널 -->
     <div id="timePanel" class="infoPanel">
       <div class="label">남은 시간</div>
       <div id="timeValue" class="value">30.00</div>
     </div>
 
-    <!-- 캐릭터 큐 -->
     <div id="queue"></div>
-
-    <!-- 중앙 쿠파 -->
     <div id="koopa"></div>
 
-    <!-- 규칙 팝업 -->
+    <!-- 클릭용 방향키 -->
+    <div id="controls">
+      <button id="btn-up" class="arrow-btn">↑</button>
+      <button id="btn-left" class="arrow-btn">←</button>
+      <button id="btn-right" class="arrow-btn">→</button>
+      <button id="btn-down" class="arrow-btn">↓</button>
+    </div>
+
+    <!-- 팝업 -->
     <div id="rulePopup" class="popup" style="display:block;">
       <h2>게임 규칙</h2>
       <p>1. 30초 안에 20점을 달성해야 합니다.</p>
       <p>2. 캐릭터에 맞는 방향키를 입력하면 만족감이 증가합니다.</p>
-      <p>3. 캐릭터에 맞지 않는 방향키를 입력하면 만족감이 감소합니다.</p>
+      <p>3. 잘못된 방향키 입력 시 만족감이 감소합니다.</p>
       <button onclick="showGuidePopup()">다음</button>
     </div>
 
-    <!-- 가이드 팝업 -->
     <div id="guidePopup" class="popup">
       <h2>캐릭터와 방향키</h2>
       <div style="display:flex; gap:20px; justify-content:center; margin-bottom:10px;">
@@ -173,28 +207,25 @@
         <img src="https://mario.wiki.gallery/images/thumb/2/27/SuperMarioParty_Waluigi.png/1200px-SuperMarioParty_Waluigi.png" style="width:80px; height:auto;">
       </div>
       <div style="display:flex; gap:20px; justify-content:center; font-size:14px; font-weight:bold;">
-        <div>마리오<br>(← 방향키)</div>
-        <div>루이지<br>(→ 방향키)</div>
-        <div>와리오<br>(↑ 방향키)</div>
-        <div>와루이지<br>(↓ 방향키)</div>
+        <div>마리오<br>(←)</div>
+        <div>루이지<br>(→)</div>
+        <div>와리오<br>(↑)</div>
+        <div>와루이지<br>(↓)</div>
       </div>
       <button onclick="startGame()">시작하기</button>
     </div>
 
-    <!-- 성공 팝업 -->
     <div id="popup1" class="popup">
       <h2>성공! 만족스럽게 움직였습니다!</h2>
       <button onclick="showSecondPopup()">확인</button>
     </div>
 
-    <!-- 성공 팝업2 -->
     <div id="popup2" class="popup">
       <h2>힌트 문장 4</h2>
       <p>성 꼭대기 탑은 거대한 해골 모양으로 장식되어 있다.</p>
       <button onclick="closePopup()">닫기</button>
     </div>
 
-    <!-- 실패 팝업 -->
     <div id="failPopup" class="popup">
       <h2>실패.. 충분히 움직이지 못했습니다..</h2>
       <button onclick="closePopup()">닫기</button>
@@ -219,7 +250,6 @@
     const targetScore = 20;
     let queue = [];
 
-    // 쿠파 이미지 매핑
     const koopaImages = {
       default: "https://raw.githubusercontent.com/duquenois/Arrow_Rush/refs/heads/main/default.png",
       ArrowLeft: "https://raw.githubusercontent.com/duquenois/Arrow_Rush/refs/heads/main/left.png",
@@ -266,7 +296,6 @@
       scoreValue.textContent = score;
       timeLeft = 30.00;
       timeValue.textContent = timeLeft.toFixed(2);
-
       queue = [];
       fillQueue();
 
@@ -300,17 +329,19 @@
       failPopup.style.display = "none";
     }
 
-    // 방향키 이벤트
-    window.addEventListener("keydown", (e) => {
-      if (koopaImages[e.key]) {
-        koopa.style.backgroundImage = `url(${koopaImages[e.key]})`;
+    function handleInput(key) {
+      if (koopaImages[key]) {
+        koopa.style.backgroundImage = `url(${koopaImages[key]})`;
+        setTimeout(() => {
+          koopa.style.backgroundImage = `url(${koopaImages.default})`;
+        }, 100);
       }
 
       if (!gameRunning) return;
       const current = queue[0];
       const firstDiv = queueDiv.children[0];
 
-      if (e.key === current.key) {
+      if (key === current.key) {
         score++;
         scoreValue.textContent = score;
         firstDiv.classList.remove("highlight");
@@ -320,7 +351,7 @@
           fillQueue();
           if (score >= targetScore) endGame(true);
         }, 150);
-      } else if (["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"].includes(e.key)) {
+      } else if (["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"].includes(key)) {
         score = Math.max(0, score - 1);
         scoreValue.textContent = score;
         firstDiv.classList.remove("highlight");
@@ -330,12 +361,13 @@
           fillQueue();
         }, 150);
       }
-    });
+    }
 
-    window.addEventListener("keyup", () => {
-      koopa.style.backgroundImage = `url(${koopaImages.default})`;
-    });
+    window.addEventListener("keydown", (e) => handleInput(e.key));
+    document.getElementById("btn-left").addEventListener("click", () => handleInput("ArrowLeft"));
+    document.getElementById("btn-right").addEventListener("click", () => handleInput("ArrowRight"));
+    document.getElementById("btn-up").addEventListener("click", () => handleInput("ArrowUp"));
+    document.getElementById("btn-down").addEventListener("click", () => handleInput("ArrowDown"));
   </script>
 </body>
 </html>
-
